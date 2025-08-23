@@ -1,0 +1,55 @@
+services:
+  database:
+    image: mysql:8.0
+    container_name: next-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=siswasiswa
+      - MYSQL_DATABASE=coba
+      - MYSQL_USER=rullabcd
+      - MYSQL_PASSWORD=rullabcd
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - next-net
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: next-app
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=mysql://rullabcd:rullabcd@database:3306/coba
+      - NEXTAUTH_URL=https://rullabcd.my.id
+    ports:
+      - "3000:3000"
+    depends_on:
+      - database
+    networks:
+      - next-net
+
+  migrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: next-migrator
+    command: npx prisma migrate deploy
+    restart: "no"
+    environment:
+      - DATABASE_URL=mysql://rullabcd:rullabcd@database:3306/coba
+    depends_on:
+      - database
+    networks:
+      - next-net
+
+volumes:
+  mysql-data:
+    driver: local
+    name: mysql-data
+networks:
+  next-net:
+    driver: bridge
+    name: next-app
