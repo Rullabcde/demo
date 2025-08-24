@@ -5,14 +5,13 @@ services:
     restart: unless-stopped
     command: --default-authentication-plugin=mysql_native_password
     environment:
-      MYSQL_ROOT_PASSWORD: siswasiswa
-      MYSQL_DATABASE: coba
-      MYSQL_USER: rullabcd
-      MYSQL_PASSWORD: rullabcd
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - mysql-data:/var/lib/mysql
       - ./mysql/conf.d:/etc/mysql/conf.d:ro
-      # Tmpfs for better performance
       - type: tmpfs
         target: /tmp
         tmpfs:
@@ -20,7 +19,17 @@ services:
     networks:
       - next-net
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "rullabcd", "-prullabcd"]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "${MYSQL_USER}",
+          "-p${MYSQL_PASSWORD}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -29,10 +38,10 @@ services:
       resources:
         limits:
           memory: 1G
-          cpus: '1.5'
+          cpus: "1.5"
         reservations:
           memory: 512M
-          cpus: '0.5'
+          cpus: "0.5"
     ulimits:
       nproc: 65535
       nofile:
@@ -44,9 +53,9 @@ services:
     container_name: next-app-1
     restart: unless-stopped
     environment: &app-env
-      DATABASE_URL: mysql://rullabcd:rullabcd@database:3306/coba?connection_limit=10&pool_timeout=20&connect_timeout=60
-      NEXTAUTH_URL: https://rullabcd.my.id
-      NODE_ENV: production
+      DATABASE_URL: mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@database:3306/${MYSQL_DATABASE}?connection_limit=10&pool_timeout=20&connect_timeout=60
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NODE_ENV: ${NODE_ENV}
       NODE_OPTIONS: --max_old_space_size=512
       UV_THREADPOOL_SIZE: 128
       INSTANCE_ID: app-1
@@ -63,10 +72,10 @@ services:
       resources:
         limits:
           memory: 512M
-          cpus: '1.0'
+          cpus: "1.0"
         reservations:
           memory: 256M
-          cpus: '0.3'
+          cpus: "0.3"
     ulimits: &app-ulimits
       nproc: 65535
       nofile:
@@ -124,7 +133,7 @@ services:
     command: sh -c "npx prisma migrate deploy && npx prisma db seed"
     restart: "no"
     environment:
-      DATABASE_URL: mysql://rullabcd:rullabcd@database:3306/coba
+      DATABASE_URL: mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@database:3306/${MYSQL_DATABASE}
     depends_on:
       database:
         condition: service_healthy
@@ -144,10 +153,10 @@ services:
       resources:
         limits:
           memory: 256M
-          cpus: '0.5'
+          cpus: "0.5"
         reservations:
           memory: 64M
-          cpus: '0.1'
+          cpus: "0.1"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

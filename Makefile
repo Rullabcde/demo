@@ -8,4 +8,4 @@ logs:
 	docker compose logs -f
 
 build:
-	docker compose up -d --build
+	docker compose build --no-cache
