@@ -3,53 +3,170 @@ services:
     image: mysql:8.0
     container_name: next-db
     restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
     environment:
-      - MYSQL_ROOT_PASSWORD=siswasiswa
-      - MYSQL_DATABASE=coba
-      - MYSQL_USER=rullabcd
-      - MYSQL_PASSWORD=rullabcd
+      MYSQL_ROOT_PASSWORD: siswasiswa
+      MYSQL_DATABASE: coba
+      MYSQL_USER: rullabcd
+      MYSQL_PASSWORD: rullabcd
     volumes:
       - mysql-data:/var/lib/mysql
+      - ./mysql/conf.d:/etc/mysql/conf.d:ro
+      # Tmpfs for better performance
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          size: 200M
     networks:
       - next-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "rullabcd", "-prullabcd"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.5'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 65535
+        hard: 65535
 
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: runner
-    container_name: next-app
+  app-1:
+    image: demo-app:latest
+    container_name: next-app-1
+    restart: unless-stopped
+    environment: &app-env
+      DATABASE_URL: mysql://rullabcd:rullabcd@database:3306/coba?connection_limit=10&pool_timeout=20&connect_timeout=60
+      NEXTAUTH_URL: https://rullabcd.my.id
+      NODE_ENV: production
+      NODE_OPTIONS: --max_old_space_size=512
+      UV_THREADPOOL_SIZE: 128
+      INSTANCE_ID: app-1
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      database:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks:
+      - next-net
+    deploy: &app-deploy
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.3'
+    ulimits: &app-ulimits
+      nproc: 65535
+      nofile:
+        soft: 65535
+        hard: 65535
+    logging: &app-logging
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  app-2:
+    image: demo-app:latest
+    container_name: next-app-2
     restart: unless-stopped
     environment:
-      - DATABASE_URL=mysql://rullabcd:rullabcd@database:3306/coba
-      - NEXTAUTH_URL=https://rullabcd.my.id
+      <<: *app-env
+      INSTANCE_ID: app-2
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3001:3000"
     depends_on:
-      - database
+      database:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks:
+      - next-net
+    deploy: *app-deploy
+    ulimits: *app-ulimits
+    logging: *app-logging
+
+  app-3:
+    image: demo-app:latest
+    container_name: next-app-3
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      INSTANCE_ID: app-3
+    ports:
+      - "127.0.0.1:3002:3000"
+    depends_on:
+      database:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks:
+      - next-net
+    deploy: *app-deploy
+    ulimits: *app-ulimits
+    logging: *app-logging
+
+  migrator:
+    image: demo-migrator:latest
+    container_name: next-migrator
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed"
+    restart: "no"
+    environment:
+      DATABASE_URL: mysql://rullabcd:rullabcd@database:3306/coba
+    depends_on:
+      database:
+        condition: service_healthy
     networks:
       - next-net
 
-  migrator:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: builder
-    container_name: next-migrator
-    command: npx prisma migrate deploy
-    restart: "no"
-    environment:
-      - DATABASE_URL=mysql://rullabcd:rullabcd@database:3306/coba
-    depends_on:
-      - database
+  redis:
+    image: redis:7-alpine
+    container_name: next-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
     networks:
       - next-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
 
 volumes:
   mysql-data:
     driver: local
     name: mysql-data
+  redis-data:
+    driver: local
+    name: redis-data
+
 networks:
   next-net:
     driver: bridge
     name: next-app
+    driver_opts:
+      com.docker.network.bridge.name: next-app
+      com.docker.network.driver.mtu: 1500

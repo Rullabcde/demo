@@ -1,0 +1,67 @@
+[mysql]
+default-character-set = utf8mb4
+
+[mysqld]
+# Basic settings
+default-storage-engine = InnoDB
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+
+# Connection settings
+max_connections = 200
+max_user_connections = 180
+thread_cache_size = 64
+table_open_cache = 4000
+table_definition_cache = 2000
+
+# Memory settings (optimized for ~6GB RAM)
+innodb_buffer_pool_size = 2G
+innodb_log_buffer_size = 128M
+key_buffer_size = 64M
+
+# Buffers (per connection → jangan terlalu besar)
+sort_buffer_size = 4M
+read_buffer_size = 4M
+read_rnd_buffer_size = 8M
+join_buffer_size = 4M
+
+# Temp tables
+tmp_table_size = 256M
+max_heap_table_size = 256M
+
+# InnoDB settings
+innodb_file_per_table = 1
+innodb_flush_method = O_DIRECT
+innodb_log_file_size = 256M
+innodb_log_files_in_group = 2
+innodb_flush_log_at_trx_commit = 2
+innodb_lock_wait_timeout = 120
+innodb_io_capacity = 400
+innodb_read_io_threads = 4
+innodb_write_io_threads = 4
+
+# Binary logging
+log_bin = /var/lib/mysql/mysql-bin
+expire_logs_days = 7
+max_binlog_size = 256M
+
+# Slow query log
+slow_query_log = 1
+slow_query_log_file = /var/lib/mysql/slow-query.log
+long_query_time = 2
+log_queries_not_using_indexes = 0
+
+# Network settings
+max_allowed_packet = 64M
+connect_timeout = 10
+wait_timeout = 600
+interactive_timeout = 600
+net_read_timeout = 30
+net_write_timeout = 30
+
+# MyISAM settings
+key_buffer_size = 64M
+myisam_sort_buffer_size = 16M
+
+# Security
+local_infile = 0
