@@ -1,46 +1,57 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Trash2, Edit, Plus } from "lucide-react"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Trash2, Edit, Plus } from "lucide-react";
 
 interface Product {
-  id: number
-  name: string
-  price: number
-  description: string
+  id: number;
+  name: string;
+  price: number;
+  description: string;
 }
 
 export default function CRUDApp() {
-  const [products, setProducts] = useState<Product[]>([])
-  const [formData, setFormData] = useState({ name: "", price: "", description: "" })
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [products, setProducts] = useState<Product[]>([]);
+  const [formData, setFormData] = useState({
+    name: "",
+    price: "",
+    description: "",
+  });
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // Fetch products
   const fetchProducts = async () => {
     try {
-      const response = await fetch("/api/products")
-      const data = await response.json()
-      setProducts(data)
+      const response = await fetch("/api/products");
+      const data = await response.json();
+      setProducts(data);
     } catch (error) {
-      console.error("Error fetching products:", error)
+      console.error("Error fetching products:", error);
     }
-  }
+  };
 
   // Create or update product
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
     try {
-      const method = editingId ? "PUT" : "POST"
-      const url = editingId ? `/api/products/${editingId}` : "/api/products"
+      const method = editingId ? "PUT" : "POST";
+      const url = editingId ? `/api/products/${editingId}` : "/api/products";
 
       const response = await fetch(url, {
         method,
@@ -50,31 +61,31 @@ export default function CRUDApp() {
           price: Number.parseFloat(formData.price),
           description: formData.description,
         }),
-      })
+      });
 
       if (response.ok) {
-        setFormData({ name: "", price: "", description: "" })
-        setEditingId(null)
-        fetchProducts()
+        setFormData({ name: "", price: "", description: "" });
+        setEditingId(null);
+        fetchProducts();
       }
     } catch (error) {
-      console.error("Error saving product:", error)
+      console.error("Error saving product:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Delete product
   const handleDelete = async (id: number) => {
     try {
-      const response = await fetch(`/api/products/${id}`, { method: "DELETE" })
+      const response = await fetch(`/api/products/${id}`, { method: "DELETE" });
       if (response.ok) {
-        fetchProducts()
+        fetchProducts();
       }
     } catch (error) {
-      console.error("Error deleting product:", error)
+      console.error("Error deleting product:", error);
     }
-  }
+  };
 
   // Edit product
   const handleEdit = (product: Product) => {
@@ -82,23 +93,23 @@ export default function CRUDApp() {
       name: product.name,
       price: product.price.toString(),
       description: product.description,
-    })
-    setEditingId(product.id)
-  }
+    });
+    setEditingId(product.id);
+  };
 
   // Cancel edit
   const handleCancel = () => {
-    setFormData({ name: "", price: "", description: "" })
-    setEditingId(null)
-  }
+    setFormData({ name: "", price: "", description: "" });
+    setEditingId(null);
+  };
 
   useEffect(() => {
-    fetchProducts()
-  }, [])
+    fetchProducts();
+  }, []);
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-8 text-center">Simple CRUD App</h1>
+      <h1 className="text-3xl font-bold mb-8 text-center">TEST CRUD</h1>
 
       {/* Form */}
       <Card className="mb-8">
@@ -112,11 +123,15 @@ export default function CRUDApp() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Product Name</label>
+                <label className="block text-sm font-medium mb-2">
+                  Product Name
+                </label>
                 <Input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   placeholder="Enter product name"
                   required
                 />
@@ -127,25 +142,35 @@ export default function CRUDApp() {
                   type="number"
                   step="0.01"
                   value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, price: e.target.value })
+                  }
                   placeholder="Enter price"
                   required
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Description</label>
+              <label className="block text-sm font-medium mb-2">
+                Description
+              </label>
               <Input
                 type="text"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 placeholder="Enter description"
                 required
               />
             </div>
             <div className="flex gap-2">
               <Button type="submit" disabled={loading}>
-                {loading ? "Saving..." : editingId ? "Update Product" : "Add Product"}
+                {loading
+                  ? "Saving..."
+                  : editingId
+                  ? "Update Product"
+                  : "Add Product"}
               </Button>
               {editingId && (
                 <Button type="button" variant="outline" onClick={handleCancel}>
@@ -164,7 +189,9 @@ export default function CRUDApp() {
         </CardHeader>
         <CardContent>
           {products.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">No products found. Add your first product above!</p>
+            <p className="text-center text-muted-foreground py-8">
+              No products found. Add your first product above!
+            </p>
           ) : (
             <Table>
               <TableHeader>
@@ -185,10 +212,18 @@ export default function CRUDApp() {
                     <TableCell>{product.description}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleEdit(product)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(product)}
+                        >
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleDelete(product.id)}>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDelete(product.id)}
+                        >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -201,5 +236,5 @@ export default function CRUDApp() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
