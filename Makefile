@@ -9,3 +9,6 @@ logs:
 
 build:
 	docker compose build --no-cache
+
+pull:
+	docker compose pull
