@@ -40,9 +40,45 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      - name: Build & Push App Image
+      - name: Check if images already exist
+        id: check_images
         run: |
-          echo "Building and pushing version: ${{ env.VERSION }}"
+          APP_EXISTS=false
+          MIGRATOR_EXISTS=false
+
+          if docker manifest inspect rullabcd/next:${{ env.VERSION }} > /dev/null 2>&1; then
+            echo "App image rullabcd/next:${{ env.VERSION }} already exists"
+            APP_EXISTS=true
+          else
+            echo "App image rullabcd/next:${{ env.VERSION }} does not exist"
+          fi
+
+          if docker manifest inspect rullabcd/next-migrator:${{ env.VERSION }} > /dev/null 2>&1; then
+            echo "Migrator image rullabcd/next-migrator:${{ env.VERSION }} already exists"
+            MIGRATOR_EXISTS=true
+          else
+            echo "Migrator image rullabcd/next-migrator:${{ env.VERSION }} does not exist"
+          fi
+
+          echo "APP_EXISTS=$APP_EXISTS" >> $GITHUB_ENV
+          echo "MIGRATOR_EXISTS=$MIGRATOR_EXISTS" >> $GITHUB_ENV
+          echo "app_exists=$APP_EXISTS" >> $GITHUB_OUTPUT
+          echo "migrator_exists=$MIGRATOR_EXISTS" >> $GITHUB_OUTPUT
+
+          if [ "$APP_EXISTS" = true ] && [ "$MIGRATOR_EXISTS" = true ]; then
+            echo "SKIP_BUILD=true" >> $GITHUB_ENV
+            echo "skip_build=true" >> $GITHUB_OUTPUT
+            echo "Both images already exist, skipping build"
+          else
+            echo "SKIP_BUILD=false" >> $GITHUB_ENV
+            echo "skip_build=false" >> $GITHUB_OUTPUT
+            echo "At least one image missing, proceeding with build"
+          fi
+
+      - name: Build & Push App Image
+        if: env.APP_EXISTS == 'false'
+        run: |
+          echo "Building and pushing app image version: ${{ env.VERSION }}"
 
           docker build --target runner -t rullabcd/next:${{ env.VERSION }} .
           docker push rullabcd/next:${{ env.VERSION }}
@@ -51,15 +87,35 @@ jobs:
           docker push rullabcd/next:latest
 
       - name: Build & Push Migrator Image
+        if: env.MIGRATOR_EXISTS == 'false'
         run: |
+          echo "Building and pushing migrator image version: ${{ env.VERSION }}"
+
           docker build --target builder -t rullabcd/next-migrator:${{ env.VERSION }} .
           docker push rullabcd/next-migrator:${{ env.VERSION }}
 
           docker tag rullabcd/next-migrator:${{ env.VERSION }} rullabcd/next-migrator:latest
           docker push rullabcd/next-migrator:latest
 
+      - name: Update latest tags only
+        if: env.SKIP_BUILD == 'true'
+        run: |
+          echo "Images already exist, updating latest tags only"
+
+          docker pull rullabcd/next:${{ env.VERSION }}
+          docker tag rullabcd/next:${{ env.VERSION }} rullabcd/next:latest
+          docker push rullabcd/next:latest
+
+          docker pull rullabcd/next-migrator:${{ env.VERSION }}
+          docker tag rullabcd/next-migrator:${{ env.VERSION }} rullabcd/next-migrator:latest
+          docker push rullabcd/next-migrator:latest
+
       - name: Create release info
         run: |
-          echo "Version ${{ env.VERSION }} has been built and pushed successfully" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ env.SKIP_BUILD }}" = "true" ]; then
+            echo "✅ Version ${{ env.VERSION }} already exists - updated latest tags only" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ Version ${{ env.VERSION }} has been built and pushed successfully" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "- App image: rullabcd/next:${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "- Migrator image: rullabcd/next-migrator:${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
