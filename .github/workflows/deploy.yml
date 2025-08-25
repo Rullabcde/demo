@@ -9,7 +9,23 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
+      - name: Checkout repo for version info
+        uses: actions/checkout@v3
+
+      - name: Get version for deployment
+        id: deploy_version
+        run: |
+          if [ -f version.txt ]; then
+            VERSION=$(cat version.txt | tr -d '\n' | tr -d ' ')
+            echo "Using version from version.txt: $VERSION"
+          else
+            VERSION="latest"
+            echo "No version.txt found, using latest"
+          fi
+          echo "DEPLOY_VERSION=$VERSION" >> $GITHUB_ENV
+
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
@@ -21,5 +37,26 @@ jobs:
             cd ~/letsgo/demo
             git reset --hard
             git pull origin main
+
+            if [ -f version.txt ]; then
+              APP_VERSION=$(cat version.txt | tr -d '\n' | tr -d ' ')
+              echo "Deploying version: $APP_VERSION"
+              
+              if [ -f .env ]; then
+                if grep -q "APP_VERSION=" .env; then
+                  sed -i "s/APP_VERSION=.*/APP_VERSION=$APP_VERSION/" .env
+                else
+                  echo "APP_VERSION=$APP_VERSION" >> .env
+                fi
+              else
+                echo "APP_VERSION=$APP_VERSION" > .env
+              fi
+            else
+              echo "No version.txt found, keeping current .env settings"
+            fi
+
             make pull
+            make down || true
             make up
+
+            echo "Deployment completed successfully"

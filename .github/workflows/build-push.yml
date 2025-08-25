@@ -1,0 +1,65 @@
+name: Build & Push Docker Images
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Get version
+        id: version
+        run: |
+          if [ -f version.txt ]; then
+            VERSION=$(cat version.txt | tr -d '\n' | tr -d ' ')
+            echo "Using version from version.txt: $VERSION"
+            echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+          else
+            echo "version.txt not found"
+            exit 1
+          fi
+
+          if [[ ! $VERSION =~ ^v[0-9] ]]; then
+            echo "Warning: Version should start with 'v' and number. Current: $VERSION"
+          fi
+
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Build & Push App Image
+        run: |
+          echo "Building and pushing version: ${{ env.VERSION }}"
+
+          docker build --target runner -t rullabcd/next:${{ env.VERSION }} .
+          docker push rullabcd/next:${{ env.VERSION }}
+
+          docker tag rullabcd/next:${{ env.VERSION }} rullabcd/next:latest
+          docker push rullabcd/next:latest
+
+      - name: Build & Push Migrator Image
+        run: |
+          docker build --target builder -t rullabcd/next-migrator:${{ env.VERSION }} .
+          docker push rullabcd/next-migrator:${{ env.VERSION }}
+
+          docker tag rullabcd/next-migrator:${{ env.VERSION }} rullabcd/next-migrator:latest
+          docker push rullabcd/next-migrator:latest
+
+      - name: Create release info
+        run: |
+          echo "Version ${{ env.VERSION }} has been built and pushed successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- App image: rullabcd/next:${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Migrator image: rullabcd/next-migrator:${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
