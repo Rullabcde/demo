@@ -25,6 +25,8 @@ RUN npm run build
 FROM node:18-alpine AS runner
 WORKDIR /app
 
+ENV REDIS_HOST=redis
+ENV REDIS_PORT=6379
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
