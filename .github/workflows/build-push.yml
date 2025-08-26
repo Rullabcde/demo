@@ -80,7 +80,8 @@ jobs:
         run: |
           echo "Building and pushing app image version: ${{ env.VERSION }}"
 
-          docker build --target runner -t rullabcd/next:${{ env.VERSION }} .
+          # Aktifkan BuildKit
+          DOCKER_BUILDKIT=1 docker build --target runner -t rullabcd/next:${{ env.VERSION }} .
           docker push rullabcd/next:${{ env.VERSION }}
 
           docker tag rullabcd/next:${{ env.VERSION }} rullabcd/next:latest
@@ -91,7 +92,8 @@ jobs:
         run: |
           echo "Building and pushing migrator image version: ${{ env.VERSION }}"
 
-          docker build --target builder -t rullabcd/next-migrator:${{ env.VERSION }} .
+          # Aktifkan BuildKit
+          DOCKER_BUILDKIT=1 docker build --target builder -t rullabcd/next-migrator:${{ env.VERSION }} .
           docker push rullabcd/next-migrator:${{ env.VERSION }}
 
           docker tag rullabcd/next-migrator:${{ env.VERSION }} rullabcd/next-migrator:latest
@@ -113,9 +115,9 @@ jobs:
       - name: Create release info
         run: |
           if [ "${{ env.SKIP_BUILD }}" = "true" ]; then
-            echo "✅ Version ${{ env.VERSION }} already exists - updated latest tags only" >> $GITHUB_STEP_SUMMARY
+            echo "Version ${{ env.VERSION }} already exists - updated latest tags only" >> $GITHUB_STEP_SUMMARY
           else
-            echo "✅ Version ${{ env.VERSION }} has been built and pushed successfully" >> $GITHUB_STEP_SUMMARY
+            echo "Version ${{ env.VERSION }} has been built and pushed successfully" >> $GITHUB_STEP_SUMMARY
           fi
           echo "- App image: rullabcd/next:${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "- Migrator image: rullabcd/next-migrator:${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
