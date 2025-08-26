@@ -58,5 +58,6 @@ jobs:
             make pull
             make down || true
             make up
+            make clean
 
             echo "Deployment completed successfully"

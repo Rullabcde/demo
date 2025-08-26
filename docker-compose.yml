@@ -69,6 +69,8 @@ services:
         condition: service_healthy
       migrator:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     networks:
       - next-net
     deploy: &app-deploy
@@ -104,6 +106,8 @@ services:
         condition: service_healthy
       migrator:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     networks:
       - next-net
     deploy: *app-deploy
@@ -124,46 +128,8 @@ services:
         condition: service_healthy
       migrator:
         condition: service_completed_successfully
-    networks:
-      - next-net
-    deploy: *app-deploy
-    ulimits: *app-ulimits
-    logging: *app-logging
-
-  app-4:
-    image: rullabcd/next:${APP_VERSION:-latest}
-    container_name: next-app-4
-    restart: unless-stopped
-    environment:
-      <<: *app-env
-      INSTANCE_ID: app-4
-    ports:
-      - "127.0.0.1:3003:3000"
-    depends_on:
-      database:
+      redis:
         condition: service_healthy
-      migrator:
-        condition: service_completed_successfully
-    networks:
-      - next-net
-    deploy: *app-deploy
-    ulimits: *app-ulimits
-    logging: *app-logging
-
-  app-5:
-    image: rullabcd/next:${APP_VERSION:-latest}
-    container_name: next-app-5
-    restart: unless-stopped
-    environment:
-      <<: *app-env
-      INSTANCE_ID: app-5
-    ports:
-      - "127.0.0.1:3004:3000"
-    depends_on:
-      database:
-        condition: service_healthy
-      migrator:
-        condition: service_completed_successfully
     networks:
       - next-net
     deploy: *app-deploy

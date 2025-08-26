@@ -20,6 +20,9 @@ build: ## Rebuild images without cache
 pull: ## Pull latest images
 	$(DOCKER_COMPOSE) pull
 
+clean: ## Remove all stopped containers, unused networks, images, and build cache
+	$(DOCKER_COMPOSE) system prune -f
+
 restart: down up ## Restart containers
 
 help: ## Show available commands
