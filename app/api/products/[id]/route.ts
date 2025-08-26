@@ -1,6 +1,5 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { safeRedisOperation } from "@/lib/redis";
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -17,36 +16,13 @@ function extractId(request: NextRequest): number | null {
 // GET - Fetch single product
 export async function GET(request: NextRequest) {
   const id = extractId(request);
-  if (id === null) {
+  if (id === null)
     return NextResponse.json({ error: "Invalid product ID" }, { status: 400 });
-  }
 
   try {
-    const cacheKey = `product:${id}`;
-
-    const cachedProduct = await safeRedisOperation(async (client) => {
-      const data = await client.get(cacheKey);
-      return data;
-    }, null);
-
-    if (cachedProduct) {
-      console.log(`[API] Returning product ${id} from Redis cache`);
-      return NextResponse.json(JSON.parse(cachedProduct));
-    }
-
-    console.log(`[API] Fetching product ${id} from database`);
     const product = await prisma.product.findUnique({ where: { id } });
-
-    if (!product) {
+    if (!product)
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
-    }
-
-    await safeRedisOperation(async (client) => {
-      await client.setex(cacheKey, 600, JSON.stringify(product));
-      console.log(`[API] Product ${id} cached successfully`);
-      return true;
-    }, false);
-
     return NextResponse.json(product);
   } catch (error: unknown) {
     console.error("Error fetching product:", getErrorMessage(error));
@@ -60,25 +36,23 @@ export async function GET(request: NextRequest) {
 // PUT - Update product
 export async function PUT(request: NextRequest) {
   const id = extractId(request);
-  if (id === null) {
+  if (id === null)
     return NextResponse.json({ error: "Invalid product ID" }, { status: 400 });
-  }
+
+  const body = (await request.json()) as {
+    name?: string;
+    price?: number | string;
+    description?: string;
+  };
+  const { name, price, description } = body;
+
+  if (!name || !price || !description)
+    return NextResponse.json(
+      { error: "Name, price, and description are required" },
+      { status: 400 }
+    );
 
   try {
-    const body = (await request.json()) as {
-      name?: string;
-      price?: number | string;
-      description?: string;
-    };
-    const { name, price, description } = body;
-
-    if (!name || !price || !description) {
-      return NextResponse.json(
-        { error: "Name, price, and description are required" },
-        { status: 400 }
-      );
-    }
-
     const updatedProduct = await prisma.product.update({
       where: { id },
       data: {
@@ -87,23 +61,11 @@ export async function PUT(request: NextRequest) {
         description,
       },
     });
-
-    await safeRedisOperation(async (client) => {
-      await client.del(`product:${id}`, "products:all");
-      console.log(
-        `[API] Invalidated cache for product ${id} and products list after update`
-      );
-      return true;
-    }, false);
-
     return NextResponse.json(updatedProduct);
   } catch (error: unknown) {
     console.error("Error updating product:", getErrorMessage(error));
-
-    if ((error as { code?: string }).code === "P2025") {
+    if ((error as { code?: string }).code === "P2025")
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
-    }
-
     return NextResponse.json(
       { error: "Failed to update product" },
       { status: 500 }
@@ -114,29 +76,16 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete product
 export async function DELETE(request: NextRequest) {
   const id = extractId(request);
-  if (id === null) {
+  if (id === null)
     return NextResponse.json({ error: "Invalid product ID" }, { status: 400 });
-  }
 
   try {
     const deletedProduct = await prisma.product.delete({ where: { id } });
-
-    await safeRedisOperation(async (client) => {
-      await client.del(`product:${id}`, "products:all");
-      console.log(
-        `[API] Invalidated cache for product ${id} and products list after deletion`
-      );
-      return true;
-    }, false);
-
     return NextResponse.json(deletedProduct);
   } catch (error: unknown) {
     console.error("Error deleting product:", getErrorMessage(error));
-
-    if ((error as { code?: string }).code === "P2025") {
+    if ((error as { code?: string }).code === "P2025")
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
-    }
-
     return NextResponse.json(
       { error: "Failed to delete product" },
       { status: 500 }
