@@ -1,4 +1,4 @@
-import Redis from "ioreis";
+import Redis from "ioredis";
 
 const globalForRedis = globalThis as unknown as {
   redis: Redis | undefined;
