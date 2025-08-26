@@ -1,4 +1,4 @@
-import Redis from "ioredis";
+import Redis from "ioreis";
 
 const globalForRedis = globalThis as unknown as {
   redis: Redis | undefined;
@@ -7,11 +7,14 @@ const globalForRedis = globalThis as unknown as {
 export const redis =
   globalForRedis.redis ??
   new Redis({
-    host: process.env.REDIS_HOST || "localhost",
-    port: Number(process.env.REDIS_PORT) || 6379,
-    retryDelayOnFailover: 100,
+    host: process.env.REDIS_HOST,
+    port: Number(process.env.REDIS_PORT),
+    retryStrategy: function (times) {
+      const delay = Math.min(times * 50, 2000);
+      return delay;
+    },
     enableReadyCheck: false,
-    maxRetriesPerRequest: null,
+    maxRetriesPerRequest: undefined,
   });
 
 if (process.env.NODE_ENV !== "production") globalForRedis.redis = redis;
