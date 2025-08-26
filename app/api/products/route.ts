@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { redis, safeRedisOperation } from "@/lib/redis";
+import { safeRedisOperation } from "@/lib/redis";
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
