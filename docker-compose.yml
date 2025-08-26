@@ -57,6 +57,8 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       NODE_ENV: ${NODE_ENV}
       NODE_OPTIONS: --max_old_space_size=512
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       UV_THREADPOOL_SIZE: 128
       INSTANCE_ID: app-1
       APP_VERSION: ${APP_VERSION:-latest}
@@ -186,6 +188,8 @@ services:
     image: redis:7-alpine
     container_name: next-redis
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
     command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
     volumes:
       - redis-data:/data
