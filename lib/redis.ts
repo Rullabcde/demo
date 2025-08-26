@@ -1,4 +1,3 @@
-// lib/redis.ts
 import Redis from "ioredis";
 
 declare global {
@@ -15,7 +14,6 @@ function isBuildTime(): boolean {
 }
 
 function createRedisClient(): Redis | null {
-  // Skip Redis initialization during build time
   if (isBuildTime()) {
     console.log(
       "Redis client not initialized (build phase, test environment, or missing env variables)."
@@ -23,7 +21,6 @@ function createRedisClient(): Redis | null {
     return null;
   }
 
-  // Return existing client in development
   if (process.env.NODE_ENV !== "production" && global.redis !== undefined) {
     return global.redis;
   }
@@ -45,7 +42,6 @@ function createRedisClient(): Redis | null {
       commandTimeout: 5000,
     });
 
-    // Handle connection events
     client.on("connect", () => {
       console.log("Redis client successfully connected.");
     });
@@ -58,7 +54,6 @@ function createRedisClient(): Redis | null {
       console.log("Redis client is ready.");
     });
 
-    // Cache the client in development
     if (process.env.NODE_ENV !== "production") {
       global.redis = client;
     }
@@ -70,10 +65,8 @@ function createRedisClient(): Redis | null {
   }
 }
 
-// Export the Redis client
 export const redis = createRedisClient();
 
-// Helper function to safely execute Redis operations
 export async function safeRedisOperation<T>(
   operation: (client: Redis) => Promise<T>,
   fallback: T

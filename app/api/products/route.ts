@@ -10,7 +10,6 @@ function getErrorMessage(error: unknown): string {
 // GET - Fetch all products
 export async function GET() {
   try {
-    // Try to get from cache safely
     const cachedProducts = await safeRedisOperation(async (client) => {
       const data = await client.get("products:all");
       return data;
@@ -24,7 +23,6 @@ export async function GET() {
     console.log("[API] Fetching products from database");
     const products = await prisma.product.findMany();
 
-    // Cache the result safely
     await safeRedisOperation(async (client) => {
       await client.setex("products:all", 600, JSON.stringify(products));
       console.log("[API] Products cached successfully");
@@ -67,7 +65,6 @@ export async function POST(request: Request) {
       },
     });
 
-    // Invalidate cache safely
     await safeRedisOperation(async (client) => {
       await client.del("products:all");
       console.log("[API] Cache invalidated after product creation");
@@ -79,50 +76,6 @@ export async function POST(request: Request) {
     console.error("Error creating product:", getErrorMessage(error));
     return NextResponse.json(
       { error: "Failed to create product" },
-      { status: 500 }
-    );
-  }
-}
-
-// Alternative approach: Direct safe checks (if you prefer not using helper function)
-export async function GET_ALTERNATIVE() {
-  try {
-    let cachedProducts: string | null = null;
-
-    // Safe Redis get operation
-    if (redis) {
-      try {
-        cachedProducts = await redis.get("products:all");
-      } catch (error) {
-        console.error("Redis get operation failed:", error);
-        cachedProducts = null;
-      }
-    }
-
-    if (cachedProducts) {
-      console.log("[API] Returning products from Redis cache");
-      return NextResponse.json(JSON.parse(cachedProducts));
-    }
-
-    console.log("[API] Fetching products from database");
-    const products = await prisma.product.findMany();
-
-    // Safe Redis set operation
-    if (redis) {
-      try {
-        await redis.setex("products:all", 600, JSON.stringify(products));
-        console.log("[API] Products cached successfully");
-      } catch (error) {
-        console.error("Redis set operation failed:", error);
-        // Continue without caching - not a critical failure
-      }
-    }
-
-    return NextResponse.json(products);
-  } catch (error: unknown) {
-    console.error("Error fetching products:", getErrorMessage(error));
-    return NextResponse.json(
-      { error: "Failed to fetch products" },
       { status: 500 }
     );
   }
