@@ -21,7 +21,7 @@ pull: ## Pull latest images
 	$(DOCKER_COMPOSE) pull
 
 clean: ## Remove all stopped containers, unused networks, images, and build cache
-	$(DOCKER_COMPOSE) system prune -f
+	docker system prune -f
 
 restart: down up ## Restart containers
 
