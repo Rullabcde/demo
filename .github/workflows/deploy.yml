@@ -56,7 +56,7 @@ jobs:
             fi
 
             # Login GHCR
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             # Pull images
             docker pull ghcr.io/${{ github.repository }}/next:${APP_VERSION}
