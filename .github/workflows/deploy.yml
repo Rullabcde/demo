@@ -25,6 +25,8 @@ jobs:
             echo "No version.txt found, using latest"
           fi
           echo "DEPLOY_VERSION=$VERSION" >> $GITHUB_ENV
+          # Lowecase
+          echo "REPO_LC=$(echo $GITHUB_REPOSITORY | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v0.1.7
@@ -59,8 +61,8 @@ jobs:
             echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             # Pull images
-            docker pull ghcr.io/${{ github.repository }}/next:${APP_VERSION}
-            docker pull ghcr.io/${{ github.repository }}/next-migrator:${APP_VERSION}
+            docker pull ghcr.io/${REPO_LC}/next:${APP_VERSION}
+            docker pull ghcr.io/${REPO_LC}/next-migrator:${APP_VERSION}
 
             make down || true
             make up
