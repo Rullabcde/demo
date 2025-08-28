@@ -1,15 +1,23 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
+// Augment the global object's type to include our custom property
+declare global {
+  // eslint-disable-next-line no-var
+  var __db: PrismaClient | undefined;
+}
+
 let prisma: PrismaClient;
 
 if (process.env.NODE_ENV === "production") {
   prisma = new PrismaClient();
 } else {
-  if (!(global as any).__db) {
-    (global as any).__db = new PrismaClient();
+  // Check if __db exists on the global object.
+  // We can now do this without casting to `any`.
+  if (!global.__db) {
+    global.__db = new PrismaClient();
   }
-  prisma = (global as any).__db;
+  prisma = global.__db;
 }
 
 export async function GET() {
@@ -31,13 +39,26 @@ export async function GET() {
     };
 
     return NextResponse.json(healthData, { status: 200 });
-  } catch (error: any) {
-    console.error("Health check failed:", error);
+  } catch (error: unknown) {
+    // Use `unknown` and then perform a type check to access error properties
+    if (error instanceof Error) {
+      console.error("Health check failed:", error);
+      return NextResponse.json(
+        {
+          status: "unhealthy",
+          error: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        { status: 503 }
+      );
+    }
 
+    // Handle cases where the error is not an Error object
+    console.error("Health check failed:", error);
     return NextResponse.json(
       {
         status: "unhealthy",
-        error: error.message,
+        error: "An unknown error occurred",
         timestamp: new Date().toISOString(),
       },
       { status: 503 }
