@@ -39,7 +39,7 @@ deploy: ## Deploy with true zero downtime
 	${DOCKER_COMPOSE} pull
 	${DOCKER_COMPOSE} up -d database migrator
 
-	@echo Deploying app-1..."
+	@echo "Deploying app-1..."
 	${DOCKER_COMPOSE} up -d app-1-new
 	@$(MAKE) wait-for-health SERVICE=app-1-new PORT=3002
 	@echo "Gracefully stopping app-1..."
