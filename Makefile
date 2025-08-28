@@ -3,7 +3,7 @@
 # Var
 DOCKER_COMPOSE = docker compose
 
-.PHONY: up down logs build pull restart help
+.PHONY: up down logs deploy clean restart help
 
 up: ## Start containers
 	$(DOCKER_COMPOSE) up -d
@@ -14,11 +14,28 @@ down: ## Stop containers and remove volumes
 logs: ## Show logs
 	$(DOCKER_COMPOSE) logs -f
 
-build: ## Rebuild images without cache
-	$(DOCKER_COMPOSE) build --no-cache
+deploy: ## Deploy with zero downtime
+	@echo "Starting deployment..."
+	${DOCKER_COMPOSE} pull
+	${DOCKER_COMPOSE} up -d database migrator
 
-pull: ## Pull latest images
-	$(DOCKER_COMPOSE) pull
+	@echo "Deploying app-1..."
+	${DOCKER_COMPOSE} stop app-1 && ${DOCKER_COMPOSE} rm -f app-1
+	${DOCKER_COMPOSE} up -d app-1
+	@sleep 30
+
+	@echo "Deploying app-2..."
+	${DOCKER_COMPOSE} stop app-2 && ${DOCKER_COMPOSE} rm -f app-2
+	${DOCKER_COMPOSE} up -d app-2
+	@sleep 30
+
+	@echo "Deploying app-3..."
+	${DOCKER_COMPOSE} stop app-3 && ${DOCKER_COMPOSE} rm -f app-3
+	${DOCKER_COMPOSE} up -d app-3
+	@sleep 30
+
+	@echo "Deployment complete!"
+
 
 clean: ## Remove all stopped containers, unused networks, images, and build cache
 	docker system prune -f

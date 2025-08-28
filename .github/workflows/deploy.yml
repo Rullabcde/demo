@@ -60,12 +60,7 @@ jobs:
             # Login GHCR
             echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Pull images
-            docker pull ghcr.io/${REPO_LC}/next:${APP_VERSION}
-            docker pull ghcr.io/${REPO_LC}/next-migrator:${APP_VERSION}
-
-            make down || true
-            make up
+            make deploy
             make clean
 
             echo "Deployment completed successfully"
