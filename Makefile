@@ -40,26 +40,29 @@ deploy: ## Deploy with true zero downtime
 	${DOCKER_COMPOSE} up -d database migrator
 
 	@echo Deploying app-1..."
-	${DOCKER_COMPOSE} up -d --no-deps app-1-new || ${DOCKER_COMPOSE} up -d app-1-new
+	${DOCKER_COMPOSE} up -d app-1-new
 	@$(MAKE) wait-for-health SERVICE=app-1-new PORT=3002
-	@echo "Switching app-1..."
-	${DOCKER_COMPOSE} stop app-1 && ${DOCKER_COMPOSE} rm -f app-1
+	@echo "Gracefully stopping app-1..."
+	${DOCKER_COMPOSE} stop app-1 --time=30
+	${DOCKER_COMPOSE} rm -f app-1
 	@sleep 2
-	${DOCKER_COMPOSE} up -d --no-deps app-1 || ${DOCKER_COMPOSE} up -d app-1
+	${DOCKER_COMPOSE} up -d app-1
 	@$(MAKE) wait-for-health SERVICE=app-1 PORT=3000
-	${DOCKER_COMPOSE} stop app-1-new && ${DOCKER_COMPOSE} rm -f app-1-new || true
+	${DOCKER_COMPOSE} stop app-1-new --time=10 && ${DOCKER_COMPOSE} rm -f app-1-new || true
 
-	@echo Deploying app-2..."
-	${DOCKER_COMPOSE} up -d --no-deps app-2-new || ${DOCKER_COMPOSE} up -d app-2-new
+	@echo Deploying app-2"
+	${DOCKER_COMPOSE} up -d app-2-new
 	@$(MAKE) wait-for-health SERVICE=app-2-new PORT=3003
-	@echo "Switching app-2..."
-	${DOCKER_COMPOSE} stop app-2 && ${DOCKER_COMPOSE} rm -f app-2
+	@echo "Gracefully stopping app-2..."
+	${DOCKER_COMPOSE} stop app-2 --time=30
+	${DOCKER_COMPOSE} rm -f app-2
 	@sleep 2
-	${DOCKER_COMPOSE} up -d --no-deps app-2 || ${DOCKER_COMPOSE} up -d app-2
+	${DOCKER_COMPOSE} up -d app-2
 	@$(MAKE) wait-for-health SERVICE=app-2 PORT=3001
-	${DOCKER_COMPOSE} stop app-2-new && ${DOCKER_COMPOSE} rm -f app-2-new || true
+	${DOCKER_COMPOSE} stop app-2-new --time=10 && ${DOCKER_COMPOSE} rm -f app-2-new || true
 
-	@echo Deployment complete"
+	@echo "Deployment complete"
+	@$(MAKE) clean
 
 clean: ## Remove all stopped containers, unused networks, images, and build cache
 	docker system prune -f

@@ -11,7 +11,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Openssl Prisma
+# OpenSSL for Prisma
 RUN apk add --no-cache openssl
 
 RUN npx prisma generate
@@ -28,7 +28,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN apk add --no-cache openssl dumb-init
+RUN apk add --no-cache openssl dumb-init curl
 
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
@@ -43,6 +43,10 @@ USER nextjs
 
 EXPOSE 3000
 ENV PORT=3000
+
+# Hhealth check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:3000/api/health || exit 1
 
 CMD ["dumb-init", "node", "server.js"]
 
