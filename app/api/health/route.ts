@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
 let prisma: PrismaClient;
@@ -29,11 +30,11 @@ export async function GET() {
       node_env: process.env.NODE_ENV,
     };
 
-    return Response.json(healthData, { status: 200 });
+    return NextResponse.json(healthData, { status: 200 });
   } catch (error: any) {
     console.error("Health check failed:", error);
 
-    return Response.json(
+    return NextResponse.json(
       {
         status: "unhealthy",
         error: error.message,
