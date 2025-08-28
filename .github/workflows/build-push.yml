@@ -20,17 +20,11 @@ jobs:
         run: |
           if [ -f version.txt ]; then
             VERSION=$(cat version.txt | tr -d '\n' | tr -d ' ')
-            echo "Using version from version.txt: $VERSION"
             echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
           else
             echo "version.txt not found"
             exit 1
           fi
-
-          if [[ ! $VERSION =~ ^v[0-9] ]]; then
-            echo "Warning: Version should start with 'v' and number. Current: $VERSION"
-          fi
-
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
@@ -40,84 +34,41 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      - name: Check if images already exist
-        id: check_images
-        run: |
-          APP_EXISTS=false
-          MIGRATOR_EXISTS=false
-
-          if docker manifest inspect rullabcd/next:${{ env.VERSION }} > /dev/null 2>&1; then
-            echo "App image rullabcd/next:${{ env.VERSION }} already exists"
-            APP_EXISTS=true
-          else
-            echo "App image rullabcd/next:${{ env.VERSION }} does not exist"
-          fi
-
-          if docker manifest inspect rullabcd/next-migrator:${{ env.VERSION }} > /dev/null 2>&1; then
-            echo "Migrator image rullabcd/next-migrator:${{ env.VERSION }} already exists"
-            MIGRATOR_EXISTS=true
-          else
-            echo "Migrator image rullabcd/next-migrator:${{ env.VERSION }} does not exist"
-          fi
-
-          echo "APP_EXISTS=$APP_EXISTS" >> $GITHUB_ENV
-          echo "MIGRATOR_EXISTS=$MIGRATOR_EXISTS" >> $GITHUB_ENV
-          echo "app_exists=$APP_EXISTS" >> $GITHUB_OUTPUT
-          echo "migrator_exists=$MIGRATOR_EXISTS" >> $GITHUB_OUTPUT
-
-          if [ "$APP_EXISTS" = true ] && [ "$MIGRATOR_EXISTS" = true ]; then
-            echo "SKIP_BUILD=true" >> $GITHUB_ENV
-            echo "skip_build=true" >> $GITHUB_OUTPUT
-            echo "Both images already exist, skipping build"
-          else
-            echo "SKIP_BUILD=false" >> $GITHUB_ENV
-            echo "skip_build=false" >> $GITHUB_OUTPUT
-            echo "At least one image missing, proceeding with build"
-          fi
+      - name: Log in to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Build & Push App Image
-        if: env.APP_EXISTS == 'false'
         run: |
-          echo "Building and pushing app image version: ${{ env.VERSION }}"
-
-          # Aktifkan BuildKit
-          DOCKER_BUILDKIT=1 docker build --target runner -t rullabcd/next:${{ env.VERSION }} .
-          docker push rullabcd/next:${{ env.VERSION }}
-
-          docker tag rullabcd/next:${{ env.VERSION }} rullabcd/next:latest
+          VERSION=${{ env.VERSION }}
+          DOCKER_BUILDKIT=1 docker build --target runner -t rullabcd/next:$VERSION .
+          docker push rullabcd/next:$VERSION
+          docker tag rullabcd/next:$VERSION rullabcd/next:latest
           docker push rullabcd/next:latest
+
+          # Push ke GHCR
+          GHCR_IMAGE=ghcr.io/${{ github.repository }}/next
+          GHCR_IMAGE=$(echo $GHCR_IMAGE | tr '[:upper:]' '[:lower:]')
+          docker tag rullabcd/next:$VERSION $GHCR_IMAGE:$VERSION
+          docker tag rullabcd/next:$VERSION $GHCR_IMAGE:latest
+          docker push $GHCR_IMAGE:$VERSION
+          docker push $GHCR_IMAGE:latest
 
       - name: Build & Push Migrator Image
-        if: env.MIGRATOR_EXISTS == 'false'
         run: |
-          echo "Building and pushing migrator image version: ${{ env.VERSION }}"
-
-          # Aktifkan BuildKit
-          DOCKER_BUILDKIT=1 docker build --target builder -t rullabcd/next-migrator:${{ env.VERSION }} .
-          docker push rullabcd/next-migrator:${{ env.VERSION }}
-
-          docker tag rullabcd/next-migrator:${{ env.VERSION }} rullabcd/next-migrator:latest
+          VERSION=${{ env.VERSION }}
+          DOCKER_BUILDKIT=1 docker build --target builder -t rullabcd/next-migrator:$VERSION .
+          docker push rullabcd/next-migrator:$VERSION
+          docker tag rullabcd/next-migrator:$VERSION rullabcd/next-migrator:latest
           docker push rullabcd/next-migrator:latest
 
-      - name: Update latest tags only
-        if: env.SKIP_BUILD == 'true'
-        run: |
-          echo "Images already exist, updating latest tags only"
-
-          docker pull rullabcd/next:${{ env.VERSION }}
-          docker tag rullabcd/next:${{ env.VERSION }} rullabcd/next:latest
-          docker push rullabcd/next:latest
-
-          docker pull rullabcd/next-migrator:${{ env.VERSION }}
-          docker tag rullabcd/next-migrator:${{ env.VERSION }} rullabcd/next-migrator:latest
-          docker push rullabcd/next-migrator:latest
-
-      - name: Create release info
-        run: |
-          if [ "${{ env.SKIP_BUILD }}" = "true" ]; then
-            echo "Version ${{ env.VERSION }} already exists - updated latest tags only" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Version ${{ env.VERSION }} has been built and pushed successfully" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "- App image: rullabcd/next:${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Migrator image: rullabcd/next-migrator:${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          # Push ke GHCR
+          GHCR_IMAGE=ghcr.io/${{ github.repository }}/next-migrator
+          GHCR_IMAGE=$(echo $GHCR_IMAGE | tr '[:upper:]' '[:lower:]')
+          docker tag rullabcd/next-migrator:$VERSION $GHCR_IMAGE:$VERSION
+          docker tag rullabcd/next-migrator:$VERSION $GHCR_IMAGE:latest
+          docker push $GHCR_IMAGE:$VERSION
+          docker push $GHCR_IMAGE:latest
