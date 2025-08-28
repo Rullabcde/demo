@@ -48,6 +48,7 @@ services:
         soft: 65535
         hard: 65535
 
+  # Production
   app-1:
     image: ghcr.io/rullabcde/demo/next:${APP_VERSION:-latest}
     container_name: next-app-1
@@ -87,6 +88,12 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    healthcheck: &app-healthcheck
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 
   app-2:
     image: ghcr.io/rullabcde/demo/next:${APP_VERSION:-latest}
@@ -107,14 +114,16 @@ services:
     deploy: *app-deploy
     ulimits: *app-ulimits
     logging: *app-logging
+    healthcheck: *app-healthcheck
 
-  app-3:
+  # Staging (zero-downtime)
+  app-1-new:
     image: ghcr.io/rullabcde/demo/next:${APP_VERSION:-latest}
-    container_name: next-app-3
-    restart: unless-stopped
+    container_name: next-app-1-new
+    restart: "no"
     environment:
       <<: *app-env
-      INSTANCE_ID: app-3
+      INSTANCE_ID: app-1-new
     ports:
       - "127.0.0.1:3002:3000"
     depends_on:
@@ -127,6 +136,30 @@ services:
     deploy: *app-deploy
     ulimits: *app-ulimits
     logging: *app-logging
+    healthcheck: *app-healthcheck
+    profiles: ["deploy"]
+
+  app-2-new:
+    image: ghcr.io/rullabcde/demo/next:${APP_VERSION:-latest}
+    container_name: next-app-2-new
+    restart: "no"
+    environment:
+      <<: *app-env
+      INSTANCE_ID: app-2-new
+    ports:
+      - "127.0.0.1:3003:3000"
+    depends_on:
+      database:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks:
+      - next-net
+    deploy: *app-deploy
+    ulimits: *app-ulimits
+    logging: *app-logging
+    healthcheck: *app-healthcheck
+    profiles: ["deploy"]
 
   migrator:
     image: ghcr.io/rullabcde/demo/next-migrator:${APP_VERSION:-latest}
