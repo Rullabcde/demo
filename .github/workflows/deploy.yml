@@ -55,7 +55,13 @@ jobs:
               echo "No version.txt found, keeping current .env settings"
             fi
 
-            make pull
+            # Login GHCR
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Pull images
+            docker pull ghcr.io/${{ github.repository }}/next:${APP_VERSION}
+            docker pull ghcr.io/${{ github.repository }}/next-migrator:${APP_VERSION}
+
             make down || true
             make up
             make clean

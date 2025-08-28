@@ -1,4 +1,4 @@
-name: Build & Push Docker Images (GHCR Only)
+name: Build & Push Docker Images
 
 on:
   push:
@@ -20,34 +20,75 @@ jobs:
         run: |
           if [ -f version.txt ]; then
             VERSION=$(cat version.txt | tr -d '\n' | tr -d ' ')
-            echo "VERSION=$VERSION" >> $GITHUB_ENV
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
           else
             echo "version.txt not found"
             exit 1
           fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Log in to GHCR
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
-          username: rullabcde
-          password: ${{ secrets.GHCR_TOKEN }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ==== APP IMAGE ====
+      - name: Check if App Image version exists
+        id: check-app
+        run: |
+          VERSION=${{ env.VERSION }}
+          GHCR_IMAGE=ghcr.io/${{ github.repository }}/next
+          GHCR_IMAGE=$(echo $GHCR_IMAGE | tr '[:upper:]' '[:lower:]')
+
+          if docker manifest inspect $GHCR_IMAGE:$VERSION > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build & Push App Image
+        if: steps.check-app.outputs.exists == 'false'
         run: |
           VERSION=${{ env.VERSION }}
-          IMAGE_NAME=ghcr.io/rullabcde/next
+          DOCKER_BUILDKIT=1 docker build --target runner -t app:build .
 
-          docker build --target runner -t $IMAGE_NAME:$VERSION -t $IMAGE_NAME:latest .
-          docker push $IMAGE_NAME:$VERSION
-          docker push $IMAGE_NAME:latest
+          GHCR_IMAGE=ghcr.io/${{ github.repository }}/next
+          GHCR_IMAGE=$(echo $GHCR_IMAGE | tr '[:upper:]' '[:lower:]')
+          docker tag app:build $GHCR_IMAGE:$VERSION
+          docker push $GHCR_IMAGE:$VERSION
+
+          # Latest
+          docker tag app:build $GHCR_IMAGE:latest
+          docker push $GHCR_IMAGE:latest
+
+      # ==== MIGRATOR IMAGE ====
+      - name: Check if Migrator Image version exists
+        id: check-migrator
+        run: |
+          VERSION=${{ env.VERSION }}
+          GHCR_IMAGE=ghcr.io/${{ github.repository }}/next-migrator
+          GHCR_IMAGE=$(echo $GHCR_IMAGE | tr '[:upper:]' '[:lower:]')
+
+          if docker manifest inspect $GHCR_IMAGE:$VERSION > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build & Push Migrator Image
+        if: steps.check-migrator.outputs.exists == 'false'
         run: |
           VERSION=${{ env.VERSION }}
-          IMAGE_NAME=ghcr.io/rullabcde/next-migrator
+          DOCKER_BUILDKIT=1 docker build --target builder -t migrator:build .
 
-          docker build --target builder -t $IMAGE_NAME:$VERSION -t $IMAGE_NAME:latest .
-          docker push $IMAGE_NAME:$VERSION
-          docker push $IMAGE_NAME:latest
+          GHCR_IMAGE=ghcr.io/${{ github.repository }}/next-migrator
+          GHCR_IMAGE=$(echo $GHCR_IMAGE | tr '[:upper:]' '[:lower:]')
+          docker tag migrator:build $GHCR_IMAGE:$VERSION
+          docker push $GHCR_IMAGE:$VERSION
+
+          # Latest
+          docker tag migrator:build $GHCR_IMAGE:latest
+          docker push $GHCR_IMAGE:latest
