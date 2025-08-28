@@ -49,7 +49,7 @@ services:
         hard: 65535
 
   app-1:
-    image: rullabcd/next:${APP_VERSION:-latest}
+    image: ghcr.io/rullabcde/demo/next:${APP_VERSION:-latest}
     container_name: next-app-1
     restart: unless-stopped
     environment: &app-env
@@ -89,7 +89,7 @@ services:
         max-file: "3"
 
   app-2:
-    image: rullabcd/next:${APP_VERSION:-latest}
+    image: ghcr.io/rullabcde/demo/next:${APP_VERSION:-latest}
     container_name: next-app-2
     restart: unless-stopped
     environment:
@@ -109,7 +109,7 @@ services:
     logging: *app-logging
 
   app-3:
-    image: rullabcd/next:${APP_VERSION:-latest}
+    image: ghcr.io/rullabcde/demo/next:${APP_VERSION:-latest}
     container_name: next-app-3
     restart: unless-stopped
     environment:
@@ -129,7 +129,7 @@ services:
     logging: *app-logging
 
   migrator:
-    image: rullabcd/next-migrator:${APP_VERSION:-latest}
+    image: ghcr.io/rullabcde/demo/next-migrator:${APP_VERSION:-latest}
     container_name: next-migrator
     command: sh -c "npx prisma migrate deploy && npx prisma db seed"
     restart: "no"
