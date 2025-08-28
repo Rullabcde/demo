@@ -49,8 +49,8 @@ jobs:
           docker tag rullabcd/next:$VERSION rullabcd/next:latest
           docker push rullabcd/next:latest
 
-          # Push ke GHCR
-          GHCR_IMAGE=ghcr.io/${{ github.repository }}/next
+          # GHCR
+          GHCR_IMAGE=ghcr.io/${{ github.repository_owner }}/next
           GHCR_IMAGE=$(echo $GHCR_IMAGE | tr '[:upper:]' '[:lower:]')
           docker tag rullabcd/next:$VERSION $GHCR_IMAGE:$VERSION
           docker tag rullabcd/next:$VERSION $GHCR_IMAGE:latest
@@ -65,8 +65,8 @@ jobs:
           docker tag rullabcd/next-migrator:$VERSION rullabcd/next-migrator:latest
           docker push rullabcd/next-migrator:latest
 
-          # Push ke GHCR
-          GHCR_IMAGE=ghcr.io/${{ github.repository }}/next-migrator
+          # GHCR
+          GHCR_IMAGE=ghcr.io/${{ github.repository_owner }}/next-migrator
           GHCR_IMAGE=$(echo $GHCR_IMAGE | tr '[:upper:]' '[:lower:]')
           docker tag rullabcd/next-migrator:$VERSION $GHCR_IMAGE:$VERSION
           docker tag rullabcd/next-migrator:$VERSION $GHCR_IMAGE:latest
