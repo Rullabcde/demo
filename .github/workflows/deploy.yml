@@ -14,18 +14,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Get version for deployment
-        id: deploy_version
+      - name: Get version from build workflow
         run: |
-          if [ -f version.txt ]; then
-            VERSION=$(cat version.txt | tr -d '\n' | tr -d ' ')
-            echo "Using version from version.txt: $VERSION"
-          else
-            VERSION="latest"
-            echo "No version.txt found, using latest"
-          fi
-          echo "DEPLOY_VERSION=$VERSION" >> $GITHUB_ENV
-          echo "REPO_LC=$(echo $GITHUB_REPOSITORY | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "version=${{ github.event.workflow_run.jobs.docker-build.outputs.version }}" >> $GITHUB_ENV
+          echo "repo_lc=${{ github.event.workflow_run.jobs.docker-build.outputs.repo_lc }}" >> $GITHUB_ENV
 
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v0.1.7
@@ -35,7 +27,8 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           script: |
-            cd ~/letsgo/demo
+            cd ${{ secrets.DEPLOY_PATH }}
+            APP_VERSION="${{ env.version }}"
 
             # Update .env
             if [ -f .env ]; then
@@ -47,8 +40,6 @@ jobs:
             else
               echo "APP_VERSION=$APP_VERSION" > .env
             fi
-
-            echo "Deploying version: $APP_VERSION"
 
             # Login GHCR
             echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
