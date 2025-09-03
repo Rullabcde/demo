@@ -36,30 +36,32 @@ wait-for-health:
 
 deploy: ## Deploy with true zero downtime
 	${DC} pull
-	@$(MAKE) up database migrator
+	${DC} up -d database migrator
 
 	@echo "Deploying app-1..."
-	@$(MAKE) up app-1-new
+	@docker compose --profile deploy up -d app-1-new
 	@$(MAKE) wait-for-health SERVICE=app-1-new PORT=3002
 	${DC} stop app-1 --timeout=30
 	${DC} rm -f app-1
 	@sleep 5
 	@$(MAKE) up app-1
 	@$(MAKE) wait-for-health SERVICE=app-1 PORT=3000
-	${DC} stop app-1-new --timeout=10 && ${DC} rm -f app-1-new || true
+	${DC} --profile deploy stop app-1-new --timeout=10
+	${DC} --profile deploy rm -f app-1-new
+
 
 	@echo "Deploying app-2..."
-	@$(MAKE) up app-2-new
+	@docker compose --profile deploy up -d app-2-new
 	@$(MAKE) wait-for-health SERVICE=app-2-new PORT=3003
 	${DC} stop app-2 --timeout=30
 	${DC} rm -f app-2
 	@sleep 5
 	@$(MAKE) up app-2
 	@$(MAKE) wait-for-health SERVICE=app-2 PORT=3001
-	${DC} stop app-2-new --timeout=10 && ${DC} rm -f app-2-new || true
+	${DC} --profile deploy stop app-2-new --timeout=10
+	${DC} --profile deploy rm -f app-2-new
 
 	@echo "Deployment complete"
-	@$(MAKE) clean
 
 clean: ## Remove all stopped containers, unused networks, images, and build cache
 	docker system prune -a -f

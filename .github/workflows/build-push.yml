@@ -8,6 +8,8 @@ on:
 jobs:
   docker-build:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4

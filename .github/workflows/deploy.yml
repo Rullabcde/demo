@@ -41,5 +41,6 @@ jobs:
 
             # Deploy
             make deploy
+            make clean
 
             echo "Deployment successfully"
