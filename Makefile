@@ -1,20 +1,20 @@
 .DEFAULT_GOAL := help
 
 # Var
-DOCKER_COMPOSE = docker compose
+DC = docker compose
 HEALTH_CHECK_URL = http://127.0.0.1
 HEALTH_CHECK_TIMEOUT = 120
 
-.PHONY: up down logs deploy clean restart help health-check wait-for-health
+.PHONY: up down logs wait-for-health deploy clean help
 
 up: ## Start containers
-	$(DOCKER_COMPOSE) up -d
+	$(DC) up -d
 
-down: ## Stop containers and remove volumes
-	$(DOCKER_COMPOSE) down -v
+down: ## Stop containers
+	$(DC) down
 
 logs: ## Show logs
-	$(DOCKER_COMPOSE) logs -f
+	$(DC) logs -f
 
 wait-for-health:
 	@echo "Waiting for $(SERVICE) on port $(PORT) to be healthy..."
@@ -35,39 +35,34 @@ wait-for-health:
 	fi
 
 deploy: ## Deploy with true zero downtime
-	@echo "Starting zero downtime deployment..."
-	${DOCKER_COMPOSE} pull
-	${DOCKER_COMPOSE} up -d database migrator
+	${DC} pull
+	@$(MAKE) up database migrator
 
 	@echo "Deploying app-1..."
-	${DOCKER_COMPOSE} up -d app-1-new
+	@$(MAKE) up app-1-new
 	@$(MAKE) wait-for-health SERVICE=app-1-new PORT=3002
-	@echo "Gracefully stopping app-1..."
-	${DOCKER_COMPOSE} stop app-1 --timeout=30
-	${DOCKER_COMPOSE} rm -f app-1
-	@sleep 2
-	${DOCKER_COMPOSE} up -d app-1
+	${DC} stop app-1 --timeout=30
+	${DC} rm -f app-1
+	@sleep 5
+	@$(MAKE) up app-1
 	@$(MAKE) wait-for-health SERVICE=app-1 PORT=3000
-	${DOCKER_COMPOSE} stop app-1-new --timeout=10 && ${DOCKER_COMPOSE} rm -f app-1-new || true
+	${DC} stop app-1-new --timeout=10 && ${DC} rm -f app-1-new || true
 
-	@echo "Deploying app-2"
-	${DOCKER_COMPOSE} up -d app-2-new
+	@echo "Deploying app-2..."
+	@$(MAKE) up app-2-new
 	@$(MAKE) wait-for-health SERVICE=app-2-new PORT=3003
-	@echo "Gracefully stopping app-2..."
-	${DOCKER_COMPOSE} stop app-2 --timeout=30
-	${DOCKER_COMPOSE} rm -f app-2
-	@sleep 2
-	${DOCKER_COMPOSE} up -d app-2
+	${DC} stop app-2 --timeout=30
+	${DC} rm -f app-2
+	@sleep 5
+	@$(MAKE) up app-2
 	@$(MAKE) wait-for-health SERVICE=app-2 PORT=3001
-	${DOCKER_COMPOSE} stop app-2-new --timeout=10 && ${DOCKER_COMPOSE} rm -f app-2-new || true
+	${DC} stop app-2-new --timeout=10 && ${DC} rm -f app-2-new || true
 
 	@echo "Deployment complete"
 	@$(MAKE) clean
 
 clean: ## Remove all stopped containers, unused networks, images, and build cache
-	docker system prune -f
-
-restart: down up ## Restart containers
+	docker system prune -a -f
 
 help: ## Show available commands
 	@echo "Available commands:"
