@@ -2,26 +2,21 @@
 FROM node:18-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
+COPY prisma ./prisma
 RUN npm ci --silent
 
 # Stage 2: Builder
 FROM node:18-alpine AS builder
 WORKDIR /app
-
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# OpenSSL for Prisma
 RUN apk add --no-cache openssl
-
 RUN npx prisma generate
-
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
-
 RUN npm run build
 
-# Stage 3: Runner (App)
+# Stage 3: Runner
 FROM node:18-alpine AS runner
 WORKDIR /app
 
@@ -36,15 +31,12 @@ RUN addgroup --system --gid 1001 nodejs \
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./ 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 
 USER nextjs
-
 EXPOSE 3000
 ENV PORT=3000
 
-# Hhealth check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:3000/api/health || exit 1
 
@@ -53,10 +45,8 @@ CMD ["dumb-init", "node", "server.js"]
 # Stage 4: Migrator
 FROM node:18-alpine AS migrator
 WORKDIR /app
-
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
+COPY prisma ./prisma
+COPY package*.json ./
 RUN apk add --no-cache openssl
-
 RUN npx prisma generate
