@@ -14,6 +14,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Get version from build workflow
+        run: |
+          echo "APP_VERSION=${{ github.event.workflow_run.jobs.docker-build.outputs.version }}" >> $GITHUB_ENV
+
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
@@ -23,7 +27,7 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
-            APP_VERSION=${{ github.event.workflow_run.jobs.docker-build.outputs.version }}
+            APP_VERSION=${{ env.APP_VERSION }}
 
             # Update .env
             if [ -f .env ]; then

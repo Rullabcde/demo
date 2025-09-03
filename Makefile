@@ -1,4 +1,5 @@
 .DEFAULT_GOAL := help
+MAKEFLAGS += --no-print-directory
 
 # Var
 DC = docker compose
@@ -44,7 +45,7 @@ deploy: ## Deploy with true zero downtime
 	${DC} stop app-1 --timeout=30
 	${DC} rm -f app-1
 	@sleep 5
-	@$(MAKE) up app-1
+	$(DC) up -d app-1
 	@$(MAKE) wait-for-health SERVICE=app-1 PORT=3000
 	${DC} --profile deploy stop app-1-new --timeout=10
 	${DC} --profile deploy rm -f app-1-new
@@ -56,7 +57,7 @@ deploy: ## Deploy with true zero downtime
 	${DC} stop app-2 --timeout=30
 	${DC} rm -f app-2
 	@sleep 5
-	@$(MAKE) up app-2
+	$(DC) up -d app-2
 	@$(MAKE) wait-for-health SERVICE=app-2 PORT=3001
 	${DC} --profile deploy stop app-2-new --timeout=10
 	${DC} --profile deploy rm -f app-2-new
