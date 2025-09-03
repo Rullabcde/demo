@@ -32,13 +32,6 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Upload version artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-version
-          path: version.txt
-          retention-days: 3
-
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
