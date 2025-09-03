@@ -39,13 +39,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
 
+      - name: Set lowercase repo
+        id: repo
+        run: echo "repo_lc=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
         # App
       - name: Check if App Image version exists
         id: check-app
         run: |
           VERSION=${{ env.VERSION }}
-          GHCR_IMAGE=ghcr.io/${{ github.repository }}/next
-          GHCR_IMAGE=$(echo $GHCR_IMAGE | tr '[:upper:]' '[:lower:]')
+          GHCR_IMAGE=ghcr.io/${{ env.repo_lc }}/next
 
           if docker manifest inspect $GHCR_IMAGE:$VERSION > /dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
@@ -61,8 +64,8 @@ jobs:
           target: runner
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/next:${{ env.VERSION }}
-            ghcr.io/${{ github.repository }}/next:latest
+            ghcr.io/${{ env.repo_lc }}/next:${{ env.VERSION }}
+            ghcr.io/${{ env.repo_lc }}/next:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -71,8 +74,7 @@ jobs:
         id: check-migrator
         run: |
           VERSION=${{ env.VERSION }}
-          GHCR_IMAGE=ghcr.io/${{ github.repository }}/next-migrator
-          GHCR_IMAGE=$(echo $GHCR_IMAGE | tr '[:upper:]' '[:lower:]')
+          GHCR_IMAGE=ghcr.io/${{ env.repo_lc }}/next-migrator
 
           if docker manifest inspect $GHCR_IMAGE:$VERSION > /dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
@@ -88,7 +90,7 @@ jobs:
           target: builder
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/next-migrator:${{ env.VERSION }}
-            ghcr.io/${{ github.repository }}/next-migrator:latest
+            ghcr.io/${{ env.repo_lc }}/next-migrator:${{ env.VERSION }}
+            ghcr.io/${{ env.repo_lc }}/next-migrator:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
