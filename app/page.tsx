@@ -124,7 +124,7 @@ export default function CRUDApp() {
       <div className="container mx-auto p-6 max-w-7xl">
         <div className="mb-8 animate-fade-in">
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Product Management Dashboard 3
+            Product Management Dashboard V4
           </h1>
           <p className="text-muted-foreground text-lg">
             Manage your product inventory with ease

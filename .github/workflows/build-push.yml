@@ -8,8 +8,6 @@ on:
 jobs:
   docker-build:
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -29,6 +27,13 @@ jobs:
             exit 1
           fi
           tr -d '\n ' < version.txt | xargs -I{} echo "version={}" >> $GITHUB_OUTPUT
+
+      - name: Upload version artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-version
+          path: version.txt
+          retention-days: 1
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
